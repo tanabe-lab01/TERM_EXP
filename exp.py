@@ -9,13 +9,15 @@ from torchvision import datasets, transforms
 # アノテーション
 from corrupt_rabel import corrupt_label
 
-# TERM版クロスエントロピー
-from custom_loss.TERM_CrossEntropyLoss import TERM_CrossEntropyLoss
-
 # ニューラルネットワークモデルの定義
 from model import Net
 
-def run(t, annotator, true_label=False):
+def run(criterion, annotator, true_label=False):
+    # ----------------------------------------------------------
+    # input:
+    #   criterion:損失関数
+    #   annotator:アノテータ―がランダムにラベル付けを行う確率
+
     # ----------------------------------------------------------
     # ハイパーパラメータなどの設定値
     num_epochs = 10         # 学習を繰り返す回数
@@ -73,14 +75,8 @@ def run(t, annotator, true_label=False):
         shuffle=True)
 
     # ----------------------------------------------------------
-    loss_log = []
-
     # ニューラルネットワークの生成
     model = Net(image_size, 10).to(device)
-
-    # ----------------------------------------------------------
-    # 損失関数の設定
-    criterion = TERM_CrossEntropyLoss()
 
     # ----------------------------------------------------------
     # 最適化手法の設定
@@ -89,6 +85,8 @@ def run(t, annotator, true_label=False):
     # ----------------------------------------------------------
     # 学習
     model.train()  # モデルを訓練モードにする
+
+    loss_log = []
 
     for epoch in range(num_epochs):  # 学習を繰り返し行う
         tmp_log = []  # epoch毎のlossのログ
@@ -145,7 +143,7 @@ def run(t, annotator, true_label=False):
             outputs = model(inputs)
 
             # 損失(出力とラベルとの誤差)の計算
-            loss_sum += criterion(outputs, labels, t=10)
+            loss_sum += criterion(outputs, labels)
 
             # 正解の値を取得
             pred = outputs.argmax(1)
@@ -153,15 +151,4 @@ def run(t, annotator, true_label=False):
             correct += pred.eq(labels.view_as(pred)).sum().item()
 
     print(f"Loss: {loss_sum.item() / len(test_dataloader)}, Accuracy: {100*correct/len(test_dataset)}% ({correct}/{len(test_dataset)})")
-
-    index = []
-    for i in range(num_epochs):
-        index.append(f"{i+1}")
-    df = pd.DataFrame(loss_log, index=index)
-    filename = f'./loss_log/loss_log_{t}_['
-    for p in annotator:
-        filename += str(p) + '_'
-    filename = filename[:-1] + '].csv'
-    df.to_csv(filename, header=False, mode='w')
-
     
