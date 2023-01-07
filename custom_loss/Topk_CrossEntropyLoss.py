@@ -12,14 +12,12 @@ class Topk_CrossEntropyLoss(nn.Module):
 
     def forward(self, outputs, labels):
         loss = nn.CrossEntropyLoss(reduction='none')(outputs, labels)
-        sorted_loss, idx = torch.sort(loss)
-        sorted_loss_lst = list(sorted_loss)[::-1]
+        loss, _ = torch.sort(loss, descending=True)
         if self.k == 0:
-            return torch.tensor(sorted_loss_lst)[0]
+            return loss[0]
         else:
             assert self.k > 0 and self.k <= 1, 'invalid k'
-            sorted_loss_lst = sorted_loss_lst[:int(len(loss)*self.k)]
-            return torch.tensor(sorted_loss_lst).mean()
+            return loss[:int(len(loss)*self.k)].mean()
 
 
 if __name__ == '__main__':
